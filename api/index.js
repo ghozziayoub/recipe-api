@@ -4,8 +4,11 @@ const crypto = require('crypto');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { PrismaClient } = require('@prisma/client');
+const { withAccelerate } = require('@prisma/extension-accelerate');
 
-const prisma = new PrismaClient();
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.PRISMA_DATABASE_URL
+}).$extends(withAccelerate());
 
 const app = express();
 const PORT = process.env.PORT || 3000;
