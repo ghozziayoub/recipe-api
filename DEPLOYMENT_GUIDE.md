@@ -36,7 +36,9 @@ Follow this step-by-step guide to deploy your Recipe API with Prisma Postgres.
 4.  **IMPORTANT:** In the "Configure Project" screen, expand **"Environment Variables"**.
 5.  Add the following variable:
     *   **Name:** `PRISMA_DATABASE_URL`
-    *   **Value:** `prisma+postgres://accelerate.prisma-data.net/?api_key=...` (The long string starting with `prisma+postgres://` that you got)
+    *   **Value:** `prisma+postgres://accelerate.prisma-data.net/?api_key=...`
+    *   **Name:** `DATABASE_URL`
+    *   **Value:** `postgres://...` (The standard postgres connection string you got)
 6.  Click **"Deploy"**.
 
 ---
