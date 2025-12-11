@@ -3,7 +3,11 @@ const cors = require('cors');
 const { v4: uuidv4 } = require('uuid');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
-const { sql } = require('@vercel/postgres');
+const { PrismaClient } = require('@prisma/client');
+
+const prisma = new PrismaClient({
+  datasourceUrl: process.env.PRISMA_DATABASE_URL
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -77,35 +81,20 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
  */
 
 // In-memory data store
-// In-memory data store removed, using Vercel Postgres
+// In-memory data store removed, using Prisma
 
 /**
  * @swagger
  * /api/init:
  *   get:
- *     summary: Initialize the database table (Run once)
+ *     summary: Initialize the database (Not needed for Prisma, use 'npx prisma db push')
  *     tags: [System]
  *     responses:
  *       200:
- *         description: Table created successfully
+ *         description: Info message
  */
 app.get('/api/init', async (req, res) => {
-  try {
-    await sql`
-      CREATE TABLE IF NOT EXISTS recipes (
-        id UUID PRIMARY KEY,
-        title TEXT,
-        description TEXT,
-        ingredients TEXT,
-        steps TEXT,
-        image_url TEXT
-      );
-    `;
-    res.status(200).json({ message: 'Table created successfully' });
-  } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
-  }
+  res.json({ message: 'For Prisma, please run "npx prisma db push" in your deployment build command or locally.' });
 });
 
 /**
@@ -133,8 +122,8 @@ app.get('/api/init', async (req, res) => {
  */
 app.get('/api/recipes', async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM recipes`;
-    res.json(rows);
+    const recipes = await prisma.recipe.findMany();
+    res.json(recipes);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -166,11 +155,13 @@ app.get('/api/recipes', async (req, res) => {
  */
 app.get('/api/recipes/:id', async (req, res) => {
   try {
-    const { rows } = await sql`SELECT * FROM recipes WHERE id = ${req.params.id}`;
-    if (rows.length === 0) {
+    const recipe = await prisma.recipe.findUnique({
+      where: { id: req.params.id }
+    });
+    if (!recipe) {
       return res.status(404).json({ message: 'Recipe not found' });
     }
-    res.json(rows[0]);
+    res.json(recipe);
   } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
@@ -206,23 +197,16 @@ app.post('/api/recipes', async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields: title, description, ingredients, steps' });
   }
 
-  const id = uuidv4();
-  const imgUrl = image_url || '';
-
   try {
-    await sql`
-      INSERT INTO recipes (id, title, description, ingredients, steps, image_url)
-      VALUES (${id}, ${title}, ${description}, ${ingredients}, ${steps}, ${imgUrl})
-    `;
-
-    const newRecipe = {
-      id,
-      title,
-      description,
-      ingredients,
-      steps,
-      image_url: imgUrl
-    };
+    const newRecipe = await prisma.recipe.create({
+      data: {
+        title,
+        description,
+        ingredients,
+        steps,
+        image_url: image_url || ''
+      }
+    });
 
     res.status(201).json(newRecipe);
   } catch (error) {
@@ -265,34 +249,22 @@ app.put('/api/recipes/:id', async (req, res) => {
   const id = req.params.id;
 
   try {
-    // First check if recipe exists
-    const check = await sql`SELECT * FROM recipes WHERE id = ${id}`;
-    if (check.rows.length === 0) {
+    const updatedRecipe = await prisma.recipe.update({
+      where: { id },
+      data: {
+        title,
+        description,
+        ingredients,
+        steps,
+        image_url
+      }
+    });
+
+    res.json(updatedRecipe);
+  } catch (error) {
+    if (error.code === 'P2025') { // Prisma error code for record not found
       return res.status(404).json({ message: 'Recipe not found' });
     }
-
-    const current = check.rows[0];
-    const newTitle = title || current.title;
-    const newDesc = description || current.description;
-    const newIng = ingredients || current.ingredients;
-    const newSteps = steps || current.steps;
-    const newImg = image_url || current.image_url;
-
-    await sql`
-      UPDATE recipes 
-      SET title = ${newTitle}, description = ${newDesc}, ingredients = ${newIng}, steps = ${newSteps}, image_url = ${newImg}
-      WHERE id = ${id}
-    `;
-
-    res.json({
-      id,
-      title: newTitle,
-      description: newDesc,
-      ingredients: newIng,
-      steps: newSteps,
-      image_url: newImg
-    });
-  } catch (error) {
     console.error(error);
     res.status(500).json({ error: error.message });
   }
@@ -319,12 +291,14 @@ app.put('/api/recipes/:id', async (req, res) => {
  */
 app.delete('/api/recipes/:id', async (req, res) => {
   try {
-    const result = await sql`DELETE FROM recipes WHERE id = ${req.params.id}`;
-    if (result.rowCount === 0) {
-      return res.status(404).json({ message: 'Recipe not found' });
-    }
+    await prisma.recipe.delete({
+      where: { id: req.params.id }
+    });
     res.status(204).send();
   } catch (error) {
+    if (error.code === 'P2025') {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
     console.error(error);
     res.status(500).json({ error: error.message });
   }

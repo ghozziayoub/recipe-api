@@ -1,6 +1,6 @@
 # Vercel Deployment Guide for Recipe API
 
-Follow this step-by-step guide to deploy your Recipe API with Vercel Postgres.
+Follow this step-by-step guide to deploy your Recipe API with Prisma Postgres.
 
 ## Prerequisites
 
@@ -33,70 +33,30 @@ Follow this step-by-step guide to deploy your Recipe API with Vercel Postgres.
 1.  Go to your [Vercel Dashboard](https://vercel.com/dashboard).
 2.  Click **"Add New..."** -> **"Project"**.
 3.  Import the `recipe-api` repository you just created.
-4.  In the "Configure Project" screen, leave everything as default.
-5.  Click **"Deploy"**.
-    *   *Note: The initial deployment might fail or error because the database isn't connected yet. This is normal.*
+4.  **IMPORTANT:** In the "Configure Project" screen, expand **"Environment Variables"**.
+5.  Add the following variable:
+    *   **Name:** `PRISMA_DATABASE_URL`
+    *   **Value:** `prisma+postgres://accelerate.prisma-data.net/?api_key=...` (The long string starting with `prisma+postgres://` that you got)
+6.  Click **"Deploy"**.
 
 ---
 
-## Step 3: Create and Connect Database
+## Step 3: Database Setup (Already Done!)
 
-1.  Once the project is created (even if deployment failed), go to the **Storage** tab in your project dashboard.
-2.  Click **"Create Database"**.
-3.  Select **"Postgres"**.
-4.  Give it a name (e.g., `recipe-db`) and select a region (e.g., `Washington, D.C. - iad1` or one closer to you).
-5.  Click **"Create"**.
-6.  Once created, you will see a "Connect Project" section or it might auto-connect. Ensure your `recipe-api` project is connected to this database.
-    *   This process automatically sets environment variables like `POSTGRES_URL`, `POSTGRES_USER`, etc., in your Vercel project.
+Since you already ran `npx prisma db push` locally, your database tables are already created! You don't need to do anything else.
 
 ---
 
-## Step 4: Redeploy
-
-1.  Go to the **Deployments** tab.
-2.  Click the three dots (`...`) on your latest deployment (or the failed one) and select **"Redeploy"**.
-3.  Wait for the build to finish. It should now succeed.
-
----
-
-## Step 5: Initialize the Database Table
-
-Your code has a special endpoint to create the necessary table in the database.
-
-1.  Visit your deployed URL + `/api/init`.
-    *   Example: `https://recipe-api-yourname.vercel.app/api/init`
-2.  You should see a JSON response: `{"message": "Table created successfully"}`.
-
----
-
-## Step 6: Verify and Test
+## Step 4: Verify and Test
 
 1.  Go to your Swagger documentation at `/api-docs`.
     *   Example: `https://recipe-api-yourname.vercel.app/api-docs`
 2.  Try out the API!
     *   Use **POST** to create a recipe.
     *   Use **GET** to list them.
-    *   The data is now stored safely in your Vercel Postgres database.
 
 ---
 
-## (Optional) Local Development Setup
+## Troubleshooting
 
-If you want to run the project locally connected to the Vercel database:
-
-1.  Install Vercel CLI:
-    ```bash
-    npm i -g vercel
-    ```
-2.  Link your local folder to the Vercel project:
-    ```bash
-    vercel link
-    ```
-3.  Pull the environment variables:
-    ```bash
-    vercel env pull .env.development.local
-    ```
-4.  Start the server:
-    ```bash
-    npm start
-    ```
+If you see errors about "Can't reach database", ensure you added the `PRISMA_DATABASE_URL` correctly in Vercel settings.

@@ -38,18 +38,15 @@ This is a simple backend API for managing recipes, built with Express.js and con
 3. The API will be available at `http://localhost:3000`.
 
 ## Deployment to Vercel
-
 1. Install Vercel CLI (optional) or use the Vercel dashboard.
 2. Link your project to Vercel: `vercel link`
-3. Create a Vercel Postgres database in the Vercel Dashboard -> Storage.
-4. Connect the database to your project.
-5. Pull the environment variables: `vercel env pull .env.development.local`
-6. Run `vercel` in this directory to deploy.
+3. Create a Vercel Postgres database (or any Postgres DB) and get the connection string.
+4. Set the `DATABASE_URL` environment variable in Vercel.
+5. Run `vercel` in this directory to deploy.
 
 ## Database Initialization
+This project uses **Prisma**.
+- **Locally**: Run `npx prisma db push` to create the tables.
+- **Vercel**: Add `npx prisma db push` to your "Build Command" or run it manually once.
 
-After deploying or setting up locally with env vars, run the initialization endpoint ONCE to create the table:
-`GET /api/init`
-
-**Note:** This project uses **Vercel Postgres** for persistent storage.
 
