@@ -2,10 +2,10 @@
   "name": "recipe-api",
   "version": "1.0.0",
   "description": "",
-  "main": "api/index.js",
+  "main": "api/index.mjs",
   "type": "module",
   "scripts": {
-    "start": "node api/index.js",
+    "start": "node api/index.mjs",
     "postinstall": "prisma generate"
   },
   "keywords": [],
@@ -19,10 +19,6 @@
     "express": "^5.2.1",
     "prisma": "^7.1.0",
     "swagger-jsdoc": "^6.2.8",
-    "swagger-ui-express": "^5.0.1",
-    "uuid": "^9.0.0"
-  },
-  "overrides": {
-    "uuid": "^9.0.0"
+    "swagger-ui-express": "^5.0.1"
   }
 }
