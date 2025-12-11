@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const { v4: uuidv4 } = require('uuid');
+const crypto = require('crypto');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { PrismaClient } = require('@prisma/client');
@@ -238,7 +238,6 @@ app.post('/api/recipes', async (req, res) => {
  *         content:
  *           application/json:
  *             schema:
- *               $ref: '#/components/schemas/Recipe'
  *       404:
  *         description: The recipe was not found
  */
