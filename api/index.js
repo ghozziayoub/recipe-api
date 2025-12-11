@@ -1,10 +1,10 @@
-const express = require('express');
-const cors = require('cors');
+import express from 'express';
+import cors from 'cors';
 console.log('Starting Recipe API...');
-const swaggerUi = require('swagger-ui-express');
-const swaggerJsdoc = require('swagger-jsdoc');
-const { PrismaClient } = require('@prisma/client');
-const { withAccelerate } = require('@prisma/extension-accelerate');
+import swaggerUi from 'swagger-ui-express';
+import swaggerJsdoc from 'swagger-jsdoc';
+import { PrismaClient } from '@prisma/client';
+import { withAccelerate } from '@prisma/extension-accelerate';
 
 const prisma = new PrismaClient({
   datasourceUrl: process.env.PRISMA_DATABASE_URL
@@ -36,7 +36,7 @@ const options = {
       }
     ],
   },
-  apis: ['./api/*.js'], // Path to the API docs
+  apis: ['./api/*.js'],
 };
 
 const specs = swaggerJsdoc(options);
@@ -80,9 +80,6 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
  *         steps: Boil pasta, fry guanciale, mix eggs and cheese, combine all.
  *         image_url: https://example.com/spaghetti.jpg
  */
-
-// In-memory data store
-// In-memory data store removed, using Prisma
 
 /**
  * @swagger
@@ -262,7 +259,7 @@ app.put('/api/recipes/:id', async (req, res) => {
 
     res.json(updatedRecipe);
   } catch (error) {
-    if (error.code === 'P2025') { // Prisma error code for record not found
+    if (error.code === 'P2025') {
       return res.status(404).json({ message: 'Recipe not found' });
     }
     console.error(error);
@@ -310,11 +307,11 @@ app.get('/', (req, res) => {
 });
 
 // For local development
-if (require.main === module) {
+if (process.env.NODE_ENV !== 'production') {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 }
 
 // Export for Vercel
-module.exports = app;
+export default app;
