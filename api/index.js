@@ -1,6 +1,6 @@
 const express = require('express');
 const cors = require('cors');
-const crypto = require('crypto');
+console.log('Starting Recipe API...');
 const swaggerUi = require('swagger-ui-express');
 const swaggerJsdoc = require('swagger-jsdoc');
 const { PrismaClient } = require('@prisma/client');
