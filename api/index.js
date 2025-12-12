@@ -24,11 +24,40 @@ process.on('beforeExit', async () => {
 const app = express();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors());
+// CORS configuration - allow all origins for API access
+const corsOptions = {
+  origin: true, // Allow all origins
+  credentials: true,
+  methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS', 'PATCH'],
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Requested-With', 'Accept', 'Origin'],
+  exposedHeaders: ['Content-Type', 'Authorization'],
+  optionsSuccessStatus: 200 // Some legacy browsers (IE11, various SmartTVs) choke on 204
+};
+
+app.use(cors(corsOptions));
 app.use(express.json());
 
-// Swagger configuration
-const options = {
+// Additional CORS headers middleware for extra safety
+app.use((req, res, next) => {
+  const origin = req.headers.origin;
+  if (origin) {
+    res.header('Access-Control-Allow-Origin', origin);
+  } else {
+    res.header('Access-Control-Allow-Origin', '*');
+  }
+  res.header('Access-Control-Allow-Credentials', 'true');
+  res.header('Access-Control-Allow-Methods', 'GET, POST, PUT, DELETE, OPTIONS, PATCH');
+  res.header('Access-Control-Allow-Headers', 'Content-Type, Authorization, X-Requested-With, Accept, Origin');
+  
+  // Handle preflight requests
+  if (req.method === 'OPTIONS') {
+    return res.sendStatus(200);
+  }
+  next();
+});
+
+// Swagger configuration base
+const swaggerOptions = {
   definition: {
     openapi: '3.0.0',
     info: {
@@ -38,20 +67,37 @@ const options = {
     },
     servers: [
       {
-        url: process.env.VERCEL_URL 
-          ? `https://${process.env.VERCEL_URL}` 
-          : 'http://localhost:3000',
-        description: process.env.VERCEL_URL ? 'Production server' : 'Local server',
+        url: 'http://localhost:3000',
+        description: 'Local server',
       },
     ],
   },
   apis: ['./api/*.js'],
 };
 
-const specs = swaggerJsdoc(options);
-
 // Custom Swagger UI route using CDN for serverless compatibility
 app.get('/docs', (req, res) => {
+  // Dynamically set server URL based on request
+  const protocol = req.headers['x-forwarded-proto'] || (req.secure ? 'https' : 'http');
+  const host = req.headers['x-forwarded-host'] || req.headers.host || 'localhost:3000';
+  const baseUrl = `${protocol}://${host}`;
+  
+  // Update server URL for this request
+  const options = {
+    ...swaggerOptions,
+    definition: {
+      ...swaggerOptions.definition,
+      servers: [
+        {
+          url: baseUrl,
+          description: 'Current server',
+        },
+      ],
+    },
+  };
+  
+  const specs = swaggerJsdoc(options);
+  
   const html = `<!DOCTYPE html>
 <html lang="en">
 <head>
