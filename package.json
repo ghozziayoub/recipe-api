@@ -1,24 +1,35 @@
 {
   "name": "recipe-api",
   "version": "1.0.0",
-  "description": "",
-  "main": "api/index.mjs",
-  "type": "module",
+  "description": "A RESTful API for managing recipes built with Express.js, Prisma, and PostgreSQL",
+  "main": "api/index.js",
   "scripts": {
-    "start": "node api/index.mjs",
-    "postinstall": "prisma generate"
+    "start": "node api/index.js",
+    "dev": "node api/index.js",
+    "postinstall": "prisma generate",
+    "db:push": "prisma db push",
+    "db:migrate": "prisma migrate dev",
+    "db:studio": "prisma studio"
   },
-  "keywords": [],
+  "keywords": [
+    "recipe",
+    "api",
+    "express",
+    "prisma",
+    "postgresql"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
-    "@prisma/client": "^7.1.0",
-    "@prisma/extension-accelerate": "^3.0.1",
-    "@vercel/postgres": "^0.10.0",
+    "@prisma/client": "^5.22.0",
+    "@prisma/extension-accelerate": "^1.2.1",
     "cors": "^2.8.5",
-    "express": "^5.2.1",
-    "prisma": "^7.1.0",
+    "express": "^4.21.2",
+    "prisma": "^5.22.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"
+  },
+  "engines": {
+    "node": ">=18.x"
   }
 }

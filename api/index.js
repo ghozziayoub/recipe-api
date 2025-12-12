@@ -1,14 +1,25 @@
-import express from 'express';
-import cors from 'cors';
-console.log('Starting Recipe API...');
-import swaggerUi from 'swagger-ui-express';
-import swaggerJsdoc from 'swagger-jsdoc';
-import { PrismaClient } from '@prisma/client';
-import { withAccelerate } from '@prisma/extension-accelerate';
+const express = require('express');
+const cors = require('cors');
+const swaggerUi = require('swagger-ui-express');
+const swaggerJsdoc = require('swagger-jsdoc');
+const { PrismaClient } = require('@prisma/client');
+const { withAccelerate } = require('@prisma/extension-accelerate');
 
-const prisma = new PrismaClient({
-  accelerateUrl: process.env.DATABASE_URL
+// Prisma Client initialization for serverless (Vercel)
+// This prevents connection pool exhaustion in serverless environments
+const globalForPrisma = global;
+const prisma = globalForPrisma.prisma || new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 }).$extends(withAccelerate());
+
+if (process.env.NODE_ENV !== 'production') {
+  globalForPrisma.prisma = prisma;
+}
+
+// Graceful shutdown
+process.on('beforeExit', async () => {
+  await prisma.$disconnect();
+});
 
 const app = express();
 const PORT = process.env.PORT || 3000;
@@ -27,13 +38,11 @@ const options = {
     },
     servers: [
       {
-        url: 'http://localhost:3000',
-        description: 'Local server',
+        url: process.env.VERCEL_URL 
+          ? `https://${process.env.VERCEL_URL}` 
+          : 'http://localhost:3000',
+        description: process.env.VERCEL_URL ? 'Production server' : 'Local server',
       },
-      {
-        url: '/api',
-        description: 'Production server (Vercel)',
-      }
     ],
   },
   apis: ['./api/*.js'],
@@ -83,6 +92,51 @@ app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 /**
  * @swagger
+ * /api/health:
+ *   get:
+ *     summary: Health check endpoint
+ *     description: Checks if the API and database are running properly
+ *     tags: [System]
+ *     responses:
+ *       200:
+ *         description: API and database are healthy
+ *         content:
+ *           application/json:
+ *             schema:
+ *               type: object
+ *               properties:
+ *                 status:
+ *                   type: string
+ *                   example: healthy
+ *                 database:
+ *                   type: string
+ *                   example: connected
+ *                 timestamp:
+ *                   type: string
+ *                   format: date-time
+ *       503:
+ *         description: Service unavailable (database connection issue)
+ */
+app.get('/api/health', async (req, res) => {
+  try {
+    await prisma.$queryRaw`SELECT 1`;
+    res.json({ 
+      status: 'healthy', 
+      database: 'connected',
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    res.status(503).json({ 
+      status: 'unhealthy', 
+      database: 'disconnected',
+      error: error.message,
+      timestamp: new Date().toISOString()
+    });
+  }
+});
+
+/**
+ * @swagger
  * /api/init:
  *   get:
  *     summary: Initialize the database (Not needed for Prisma, use 'npx prisma db push')
@@ -120,11 +174,15 @@ app.get('/api/init', async (req, res) => {
  */
 app.get('/api/recipes', async (req, res) => {
   try {
-    const recipes = await prisma.recipe.findMany();
+    const recipes = await prisma.recipe.findMany({
+      orderBy: {
+        id: 'desc'
+      }
+    });
     res.json(recipes);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching recipes:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -161,8 +219,8 @@ app.get('/api/recipes/:id', async (req, res) => {
     }
     res.json(recipe);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error('Error fetching recipe:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -195,21 +253,27 @@ app.post('/api/recipes', async (req, res) => {
     return res.status(400).json({ message: 'Missing required fields: title, description, ingredients, steps' });
   }
 
+  // Validate input types
+  if (typeof title !== 'string' || typeof description !== 'string' || 
+      typeof ingredients !== 'string' || typeof steps !== 'string') {
+    return res.status(400).json({ message: 'All fields must be strings' });
+  }
+
   try {
     const newRecipe = await prisma.recipe.create({
       data: {
-        title,
-        description,
-        ingredients,
-        steps,
-        image_url: image_url || ''
+        title: title.trim(),
+        description: description.trim(),
+        ingredients: ingredients.trim(),
+        steps: steps.trim(),
+        image_url: image_url ? image_url.trim() : ''
       }
     });
 
     res.status(201).json(newRecipe);
   } catch (error) {
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error('Error creating recipe:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -245,7 +309,21 @@ app.put('/api/recipes/:id', async (req, res) => {
   const { title, description, ingredients, steps, image_url } = req.body;
   const id = req.params.id;
 
+  // Validate required fields
+  if (!title || !description || !ingredients || !steps) {
+    return res.status(400).json({ message: 'Missing required fields: title, description, ingredients, steps' });
+  }
+
   try {
+    // Check if recipe exists first
+    const existingRecipe = await prisma.recipe.findUnique({
+      where: { id }
+    });
+
+    if (!existingRecipe) {
+      return res.status(404).json({ message: 'Recipe not found' });
+    }
+
     const updatedRecipe = await prisma.recipe.update({
       where: { id },
       data: {
@@ -253,7 +331,7 @@ app.put('/api/recipes/:id', async (req, res) => {
         description,
         ingredients,
         steps,
-        image_url
+        image_url: image_url || existingRecipe.image_url || ''
       }
     });
 
@@ -262,8 +340,8 @@ app.put('/api/recipes/:id', async (req, res) => {
     if (error.code === 'P2025') {
       return res.status(404).json({ message: 'Recipe not found' });
     }
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error('Error updating recipe:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
@@ -296,22 +374,31 @@ app.delete('/api/recipes/:id', async (req, res) => {
     if (error.code === 'P2025') {
       return res.status(404).json({ message: 'Recipe not found' });
     }
-    console.error(error);
-    res.status(500).json({ error: error.message });
+    console.error('Error deleting recipe:', error);
+    res.status(500).json({ error: error.message || 'Internal server error' });
   }
 });
 
 // Root route
 app.get('/', (req, res) => {
-  res.send('Recipe API is running. Documentation available at /api-docs');
+  res.json({
+    message: 'Recipe API is running',
+    version: '1.0.0',
+    documentation: '/api-docs',
+    health: '/api/health',
+    endpoints: {
+      recipes: '/api/recipes',
+      recipeById: '/api/recipes/:id'
+    }
+  });
 });
 
 // For local development
-if (process.env.NODE_ENV !== 'production') {
+if (require.main === module) {
   app.listen(PORT, () => {
     console.log(`Server is running on port ${PORT}`);
   });
 }
 
 // Export for Vercel
-export default app;
+module.exports = app;
