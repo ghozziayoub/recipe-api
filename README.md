@@ -24,7 +24,7 @@ A RESTful API for managing recipes, built with Express.js, Prisma, and PostgreSQ
 ### System
 - `GET /` - API information and available endpoints
 - `GET /api/health` - Health check endpoint (checks database connection)
-- `GET /api-docs` - Swagger UI documentation
+- `GET /docs` - Swagger UI documentation
 
 ## Data Model
 
@@ -84,7 +84,7 @@ A RESTful API for managing recipes, built with Express.js, Prisma, and PostgreSQ
 
 6. **Access the API:**
    - API: `http://localhost:3000`
-   - Swagger Docs: `http://localhost:3000/api-docs`
+   - Swagger Docs: `http://localhost:3000/docs`
    - Health Check: `http://localhost:3000/api/health`
 
 ### Useful Commands
@@ -146,7 +146,7 @@ This project is fully configured for Vercel serverless deployment. Follow these 
 
 1. Check your deployment URL (e.g., `https://your-project.vercel.app`)
 2. Test the health endpoint: `https://your-project.vercel.app/api/health`
-3. Access Swagger docs: `https://your-project.vercel.app/api-docs`
+3. Access Swagger docs: `https://your-project.vercel.app/docs`
 
 ### Important Notes for Vercel
 

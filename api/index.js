@@ -7,7 +7,7 @@ const { withAccelerate } = require('@prisma/extension-accelerate');
 
 // Prisma Client initialization for serverless (Vercel)
 // This prevents connection pool exhaustion in serverless environments
-const globalForPrisma = global;
+const globalForPrisma = globalThis;
 const prisma = globalForPrisma.prisma || new PrismaClient({
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 }).$extends(withAccelerate());
@@ -49,7 +49,7 @@ const options = {
 };
 
 const specs = swaggerJsdoc(options);
-app.use('/api-docs', swaggerUi.serve, swaggerUi.setup(specs));
+app.use('/docs', swaggerUi.serve, swaggerUi.setup(specs));
 
 /**
  * @swagger
@@ -133,20 +133,6 @@ app.get('/api/health', async (req, res) => {
       timestamp: new Date().toISOString()
     });
   }
-});
-
-/**
- * @swagger
- * /api/init:
- *   get:
- *     summary: Initialize the database (Not needed for Prisma, use 'npx prisma db push')
- *     tags: [System]
- *     responses:
- *       200:
- *         description: Info message
- */
-app.get('/api/init', async (req, res) => {
-  res.json({ message: 'For Prisma, please run "npx prisma db push" in your deployment build command or locally.' });
 });
 
 /**
@@ -384,11 +370,38 @@ app.get('/', (req, res) => {
   res.json({
     message: 'Recipe API is running',
     version: '1.0.0',
-    documentation: '/api-docs',
+    documentation: '/docs',
     health: '/api/health',
     endpoints: {
-      recipes: '/api/recipes',
-      recipeById: '/api/recipes/:id'
+      system: {
+        root: 'GET /',
+        health: 'GET /api/health',
+        documentation: 'GET /docs'
+      },
+      recipes: {
+        list: 'GET /api/recipes',
+        getById: 'GET /api/recipes/:id',
+        create: 'POST /api/recipes',
+        update: 'PUT /api/recipes/:id',
+        delete: 'DELETE /api/recipes/:id'
+      }
+    },
+    examples: {
+      createRecipe: {
+        method: 'POST',
+        url: '/api/recipes',
+        body: {
+          title: 'Recipe Title',
+          description: 'Recipe description',
+          ingredients: 'Ingredient 1, Ingredient 2',
+          steps: 'Step 1, Step 2',
+          image_url: 'https://example.com/image.jpg'
+        }
+      },
+      getRecipe: {
+        method: 'GET',
+        url: '/api/recipes/:id'
+      }
     }
   });
 });
